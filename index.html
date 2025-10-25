@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Series Coin 25</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+body, html {margin:0; padding:0; font-family:'Press Start 2P', cursive; min-height:100%; overflow-x:hidden; color:#fff;}
+/* Pixelated baseball field background (CSS generated, no image upload needed) */
+body::before {
+  content:"";
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background: linear-gradient(#4CAF50 0 60%, #8B4513 60% 100%);
+  background-size: 50px 50px;
+  z-index:-1;
+  image-rendering: pixelated;
+}
+#splash {display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; text-align:center; padding:20px;}
+#splash img {width:200px; height:200px; image-rendering:pixelated; max-width:80%; margin-bottom:20px; border:4px solid #fff; box-shadow:4px 4px #000;}
+#splash h1 {font-size:2rem; color:#ffff00; margin-bottom:15px; text-shadow:2px 2px #000;}
+#splash p {font-size:1rem; margin:10px 0; text-shadow:1px 1px #000;}
+#enterButton {margin-top:30px; padding:20px 40px; font-size:1rem; color:#fff; background-color:#0000ff; border:3px solid #fff; box-shadow:3px 3px #000; cursor:pointer; transition:transform 0.2s;}
+#enterButton:hover {transform:scale(1.05); background-color:#000099;}
+#mainContent {display:none; padding-bottom:50px;}
+header {background-color:rgba(0,0,0,0.7); padding:30px 0; text-align:center; border-bottom:2px solid #ffff00;}
+header img {width:150px; height:150px; image-rendering:pixelated; margin-bottom:10px; border:3px solid #fff;}
+header h1 {font-size:2rem; margin:0; color:#ffff00; text-shadow:2px 2px #000;}
+.coin-container {display:flex; flex-direction:column; align-items:center; margin-top:20px;}
+.coin-image {width:250px; height:250px; image-rendering:pixelated; max-width:80%;}
+.buy-button {margin-top:20px; padding:20px 50px; font-size:1.1rem; color:#fff; text-decoration:none; background-color:#ff0000; border:3px solid #fff; box-shadow:3px 3px #000; transition:transform 0.2s, background-color 0.2s;}
+.buy-button:hover {transform:scale(1.05); background-color:#cc0000;}
+.info-container {display:flex; flex-direction:column; align-items:center; max-width:1000px; margin:50px auto; padding:0 20px;}
+.info-card {background-color:rgba(50,50,50,0.85); border:2px solid #ffff00; border-radius:0; padding:20px; margin-bottom:30px; width:100%; box-shadow:4px 4px #000; text-align:left;}
+.info-card h2 {color:#ffff00; font-size:1.5rem; margin-bottom:10px; text-align:center;}
+.info-card p {font-size:0.95rem; line-height:1.5rem;}
+.vote-button {padding:15px 25px; font-family:'Press Start 2P', cursive; font-size:0.9rem; border:3px solid #fff; background-color:#0000ff; color:#fff; cursor:pointer; box-shadow:3px 3px #000; transition:transform 0.2s, background-color 0.2s; border-radius:0;}
+.vote-button:hover {transform:scale(1.05); background-color:#000099;}
+#voteTimer {text-align:center; font-size:1rem; margin-top:10px; color:#ffff00; text-shadow:1px 1px #000;}
+footer {background-color:rgba(0,0,0,0.7); padding:20px 0; text-align:center; border-top:2px solid #ffff00;}
+footer p {margin:0; font-size:0.8rem; color:#ffff00; text-shadow:1px 1px #000;}
+@media screen and (max-width:768px) {
+  #splash h1 {font-size:1.8rem;}
+  header h1 {font-size:1.8rem;}
+  #enterButton, .buy-button, .vote-button {padding:15px 35px; font-size:1rem;}
+  .info-card h2 {font-size:1.2rem;}
+  .info-card p {font-size:0.85rem;}
+}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="FAAE3741-2CDE-4359-853F-106E06619F71.jpeg.PNG" alt="World Series Coin 25">
+  <h1>Welcome to World Series Coin 25!</h1>
+  <p>Game One of the World Series is here!</p>
+  <p>Who do YOU think is gonna win?</p>
+  <button id="enterButton">Enter Site</button>
+</div>
+
+<div id="mainContent">
+  <header>
+    <img src="FAAE3741-2CDE-4359-853F-106E06619F71.jpeg.PNG" alt="World Series Coin 25 Logo">
+    <h1>World Series Coin 25</h1>
+  </header>
+
+  <div class="coin-container">
+    <img src="FAAE3741-2CDE-4359-853F-106E06619F71.jpeg.PNG" alt="World Series Coin 25" class="coin-image">
+    <a href="https://pump.fun/coin/7pm4ZHeBrHyGVUuaVuNbdxuXSqoZ8FiskhSK1KxPDRfg" target="_blank" class="buy-button">Buy on Pump.fun</a>
+  </div>
+
+  <div class="info-container">
+    <div class="info-card">
+      <h2>Why Invest?</h2>
+      <p>Join the excitement of World Series Coin 25! Early investors get perks, collectible rewards, and access to special events tied to the World Series season. Perfect for baseball fans and crypto enthusiasts alike.</p>
+    </div>
+
+    <div class="info-card">
+      <h2>Vote: How Should We Spend Creator Fees?</h2>
+      <p>Choose your favorite:</p>
+      <div id="voteOptions" style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
+        <button class="vote-button" data-vote="boosts">Continuously Buy Boosts</button>
+        <button class="vote-button" data-vote="calls">Get Calls by Big Hitters</button>
+      </div>
+      <div id="voteResults" style="margin-top:20px;text-align:center;">
+        <p>Boosts Votes: <span id="boostVotes">0</span></p>
+        <p>Big Hitters Votes: <span id="callsVotes">0</span></p>
+      </div>
+      <div id="voteTimer">Next reset in: <span id="countdown">--:--:--</span></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 World Series Coin 25 | Meme Coin Baseball Experience</p>
+  </footer>
+</div>
+
+<script>
+// Splash page
+document.getElementById('enterButton').addEventListener('click', () => {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+});
+
+// ===== Firebase Setup =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAyFs15oDOB9_8zEoWBZBbNONQlXvcHjOU",
+  authDomain: "worldseriescoin25.firebaseapp.com",
+  databaseURL: "https://worldseriescoin25-default-rtdb.firebaseio.com",
+  projectId: "worldseriescoin25",
+  storageBucket: "worldseriescoin25.firebasestorage.app",
+  messagingSenderId: "254335420037",
+  appId: "1:254335420037:web:f0a5149dd4e1508b244bec"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const votesRef = db.ref('votes');
+const ipRef = db.ref('ips');
+
+// Initialize votes if empty
+votesRef.once('value', snap => {
+  if(!snap.exists()){
+    votesRef.set({ boosts:0, calls:0, lastReset: Date.now() });
+  }
+});
+
+// Voting with IP restriction
+async function getIP() {
+  try {
+    const resp = await fetch('https://api.ipify.org?format=json');
+    const data = await resp.json();
+    return data.ip;
+  } catch(e){ return 'unknown'; }
+}
+
+document.querySelectorAll('.vote-button').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const type = btn.getAttribute('data-vote');
+    const ip = await getIP();
+    ipRef.child(ip).once('value', snap => {
+      const last = snap.val();
+      const now = Date.now();
+      const sixHours = 6*60*60*1000;
+      if(!last || now - last >= sixHours){
+        // Allow vote
+        votesRef.transaction(curr => {
+          if(!curr) curr = { boosts:0, calls:0, lastReset: Date.now() };
+          curr[type]++;
+          return curr;
+        });
+        ipRef.child(ip).set(now);
+      } else {
+        alert('You have already voted! Try again later.');
+      }
+    });
+  });
+});
+
+// Update votes live
+function updateVotes(){
+  votesRef.once('value', snap => {
+    const data = snap.val() || { boosts:0, calls:0, lastReset: Date.now() };
+    document.getElementById('boostVotes').innerText = data.boosts;
+    document.getElementById('callsVotes').innerText = data.calls;
+
+    const resetTime = 6*60*60*1000;
+    const elapsed = Date.now() - data.lastReset;
+    const remaining = resetTime - elapsed;
+    if(remaining <=0){
+      votesRef.set({ boosts:0, calls:0, lastReset: Date.now() });
+    }
+    const hrs = Math.floor(Math.max(0,remaining)/3600000);
+    const mins = Math.floor((Math.max(0,remaining)%3600000)/60000);
+    const secs = Math.floor((Math.max(0,remaining)%60000)/1000);
+    document.getElementById('countdown').innerText = 
+      `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  });
+}
+
+updateVotes();
+setInterval(updateVotes, 1000);
+</script>
+</body>
+</html>
