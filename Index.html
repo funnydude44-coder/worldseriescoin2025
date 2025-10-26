@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HackTheVote.exe — Live</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#000;
+  --cyan:#00d4ff;
+  --green:#39ff14;
+  --pink:#ff4dff;
+  --panel: rgba(0,0,0,0.78);
+  --text:#eaffff;
+  --clock-bg: #021b00;
+  --clock-digit: #7aff52;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:"Roboto Mono","Press Start 2P",monospace}
+canvas#matrix{position:fixed;inset:0;width:100%;height:100%;z-index:-2}
+
+/* Window/title */
+.container{width:95%;max-width:1200px;margin:18px auto;border-radius:8px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,0.75);z-index:10}
+.titlebar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(180deg,#071014,#051014);border-bottom:2px solid rgba(0,255,200,0.06)}
+.title-left{display:flex;align-items:center;gap:12px}
+.win-dots{display:flex;gap:8px}
+.win-dot{width:12px;height:12px;border-radius:3px}
+.dot-red{background:#ff6b6b}
+.dot-yellow{background:#ffd166}
+.dot-green{background:#6bff8a}
+.title-text{font-size:13px;color:#cfeff0}
+.logo-top{height:72px}
+
+/* layout */
+.content{display:grid;grid-template-columns:1fr 380px;gap:18px;padding:18px;background:linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.28))}
+@media(max-width:980px){.content{grid-template-columns:1fr;padding:12px}}
+
+/* panels */
+.panel{background:var(--panel);border-radius:10px;padding:14px;border:2px solid rgba(0,255,200,0.06)}
+h2{margin:0 0 10px 0;font-size:16px}
+p{margin:0 0 8px 0;color:#dff;font-size:13px;line-height:1.4}
+
+/* RECORD: BIG CLOCK (sports/football style) */
+.clock-wrapper{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:10px}
+.clock-display{
+  background: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+  border: 4px solid rgba(0,255,0,0.18);
+  padding: 10px 18px;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0,255,0,0.06), inset 0 -6px 18px rgba(0,0,0,0.6);
+  display:flex;align-items:center;justify-content:center;
+  min-width: 260px;
+}
+.clock-digits{
+  font-family: 'Roboto Mono', monospace;
+  font-weight:700;
+  color: var(--clock-digit);
+  font-size: 72px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 18px rgba(122,255,82,0.18), 0 0 40px rgba(122,255,82,0.08);
+  -webkit-font-smoothing:antialiased;
+}
+.clock-small{font-size:14px;color:var(--cyan);margin-top:4px;text-align:center}
+.clock-flash{animation: flash 0.5s infinite; }
+@keyframes flash{ 0%{transform:scale(1);opacity:1}50%{transform:scale(1.02);opacity:0.7}100%{transform:scale(1);opacity:1} }
+
+/* voting */
+.vote-note{font-size:12px;color:var(--cyan);margin-bottom:8px}
+.vote-buttons{display:flex;flex-wrap:wrap;gap:12px}
+.vote-btn{
+  flex:1 1 calc(50% - 12px);
+  min-width:140px;padding:12px;border-radius:8px;border:2px solid rgba(0,255,200,0.08);
+  background:rgba(255,255,255,0.02);color:var(--text);cursor:pointer;position:relative;text-align:center;font-size:13px;
+  transition:transform .12s ease, background .12s ease;
+}
+.vote-btn:hover{transform:scale(1.03);background:linear-gradient(90deg,var(--cyan),var(--green));color:#001}
+.vote-count{position:absolute;top:6px;right:10px;font-size:11px;color:var(--pink)}
+
+/* reactor */
+.reactor-bar{width:100%;background:rgba(0,0,0,0.55);height:34px;margin-top:12px;border-radius:10px;border:2px solid rgba(0,255,200,0.06);overflow:hidden}
+.reactor-fill{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .45s ease-in-out}
+
+/* vault */
+.vault-list{max-height:260px;overflow:auto;margin-top:12px;padding:10px;background:rgba(0,0,0,0.5);border-radius:8px;border:1px solid rgba(0,255,200,0.04);font-size:13px;color:#dff}
+.vault-item{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.03)}
+
+/* chat */
+.chat-messages{height:300px;overflow:auto;padding:10px;background:rgba(0,0,0,0.5);border-radius:8px;border:1px solid rgba(0,255,200,0.04);font-size:13px;color:#eaffff}
+.chat-line{padding:6px 0;border-bottom:1px dotted rgba(255,255,255,0.02)}
+.chat-controls{display:flex;gap:8px;margin-top:8px}
+.chat-input{flex:1;padding:10px;border-radius:8px;border:2px solid rgba(0,255,200,0.06);background:rgba(255,255,255,0.02);color:#fff}
+.chat-send{padding:10px 12px;border-radius:8px;border:2px solid rgba(0,255,200,0.06);background:transparent;color:#fff;cursor:pointer}
+.chat-send:hover{background:rgba(0,255,200,0.08);color:#001}
+
+/* buy button */
+.buy-row{display:flex;align-items:center;gap:10px;justify-content:center}
+.buy-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:2px solid rgba(0,255,200,0.08);color:#fff;text-decoration:none;font-weight:700;background:linear-gradient(90deg, rgba(0,0,0,0.6), rgba(0,0,0,0.45));cursor:pointer}
+.buy-btn img{height:28px}
+.buy-btn:hover{box-shadow:0 8px 28px rgba(0,255,0,0.06);transform:translateY(-2px)}
+
+/* roadmap */
+.roadmap ul{padding-left:18px;margin-top:8px}
+footer{text-align:center;padding:14px;color:#9fd;margin-top:18px}
+
+/* overlay */
+#winnerOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;z-index:9999}
+#winnerOverlay .box{background:linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.85));padding:18px;border-radius:10px;border:3px solid rgba(0,255,200,0.06);max-width:760px;text-align:center;color:#fff}
+
+@media(max-width:980px){.vote-btn{flex:1 1 100%}.chat-messages{height:220px}.content{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div class="container" role="application" aria-label="HackTheVote terminal site">
+  <div class="titlebar">
+    <div class="title-left">
+      <div class="win-dots" aria-hidden="true">
+        <span class="win-dot dot-red"></span>
+        <span class="win-dot dot-yellow"></span>
+        <span class="win-dot dot-green"></span>
+      </div>
+      <img src="hackthevote-logo.png" alt="HackTheVote logo" class="logo-top" id="logoEl">
+      <div class="title-text">HackTheVote.exe — Community Terminal</div>
+    </div>
+    <div style="font-size:12px;color:#cfeff0">Windows Terminal • Live</div>
+  </div>
+
+  <div class="content">
+    <!-- LEFT -->
+    <div>
+      <div class="panel">
+        <h2>HackTheVote.exe — Community Decision Meme Coin</h2>
+        <p>Community-driven token. Every <strong>3 hours</strong> the community votes on how creator rewards are spent: Buybacks & Burns, Giveaways, Boosts, or Donate to Good Causes. Fair launch — developer purchased only <strong>1%</strong> of supply. 100% of creator fees are controlled by community vote.</p>
+      </div>
+
+      <div class="panel" style="margin-top:12px;">
+        <h2>Vote Now</h2>
+
+        <!-- Clock (centered above vote buttons) -->
+        <div class="clock-wrapper" id="clockWrapper">
+          <div class="clock-display">
+            <div class="clock-digits" id="clockDigits">--:--:--</div>
+          </div>
+          <div class="clock-small">Voting Window — 3:00:00 (resets on expiry)</div>
+        </div>
+
+        <div class="vote-note">Max votes per IP per 3-hour window: <strong id="maxLabel">4</strong></div>
+
+        <div class="vote-buttons" id="voteButtons" aria-live="polite"></div>
+
+        <div class="phase" id="phaseText">Phase: loading...</div>
+
+        <div class="reactor-bar"><div class="reactor-fill" id="reactorFill"></div></div>
+
+        <div class="vault-list" id="vaultList" aria-live="polite">
+          <div style="color:var(--pink);font-size:13px;padding-bottom:6px">Vault of Decisions (past winners)</div>
+          <div id="vaultItems"><em style="color:#bfe">No past decisions yet.</em></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <aside>
+      <div class="panel" style="text-align:center">
+        <div class="buy-row">
+          <a class="buy-btn" id="buyBtn" href="https://pump.fun/profile/cryptocentric?tab=coins" target="_blank" rel="noopener">
+            <img src="hackthevote-logo.png" alt="logo">
+            <span>Buy on Pump.Fun</span>
+          </a>
+        </div>
+        <div style="font-size:12px;margin-top:8px;color:var(--cyan)">Pump.Fun profile</div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <div style="font-weight:700;text-align:center;color:#fff;margin-bottom:8px">Terminal Chat</div>
+        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+
+        <div class="chat-controls">
+          <input id="chatInput" class="chat-input" placeholder="Type a message..." maxlength="220" />
+          <button id="chatSendBtn" class="chat-send">Send</button>
+        </div>
+        <div style="font-size:12px;color:var(--cyan);margin-top:8px;text-align:center">Auto-generated hacker nicknames (persistent)</div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h2 style="margin:0 0 8px 0">About HackTheVote.EXE</h2>
+        <p style="font-size:13px;color:#e8fbff">
+          <strong>HackTheVote.EXE</strong> is a true community coin — a fair launch where the community controls how creator fees are used every three hours.
+          The developer holds only <strong>1%</strong> of the token supply. Our mission: build a transparent, community-led token and grow to millions (and beyond) through trust, transparency, and fun.
+        </p>
+        <p style="font-size:13px;color:#dfe">Every decision is public, archived in the Vault, and auditable. Vote, participate in Terminal Chat, and help shape the future.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>© 2025 HackTheVote.exe — Live</footer>
+
+<!-- Winner overlay -->
+<div id="winnerOverlay">
+  <div class="box">
+    <h2 id="winnerTitle">💡 The People Have Spoken — Decision Confirmed</h2>
+    <div id="winnerSummary" style="color:var(--cyan);margin-bottom:8px"></div>
+    <div id="winnerTimer" style="font-weight:700;margin-bottom:12px"></div>
+    <button id="closeWinnerBtn" style="padding:10px 12px;border-radius:8px;border:2px solid rgba(0,255,200,0.08);background:transparent;color:#fff;cursor:pointer">Close</button>
+  </div>
+</div>
+
+<!-- Firebase compat libs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+/* ============================
+   FIREBASE CONFIG (your project)
+   ============================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCkCXfpvIr06T2AMpdNlCMs5gB4eyGHzTQ",
+  authDomain: "beta21479.firebaseapp.com",
+  projectId: "beta21479",
+  storageBucket: "beta21479.firebasestorage.app",
+  messagingSenderId: "70817698523",
+  appId: "1:70817698523:web:08d0d4cb0568e52a1cf2fe",
+  databaseURL: "https://beta21479-default-rtdb.firebaseio.com/"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ============================
+   SETTINGS
+   ============================ */
+const VOTE_OPTIONS = ["Buybacks & Burns","Giveaways","Boosts","Donate to Good Causes"];
+const MAX_VOTES_PER_IP = 4;
+const VOTE_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 hours
+const CYCLE_MS = VOTE_WINDOW_MS; // single-phase cycles, auto-reset at end
+const IP_CHECK_URL = "https://api.ipify.org?format=json";
+
+/* ============================
+   HELPERS
+   ============================ */
+function safeKey(s){ return encodeURIComponent(s); }
+function fmtTime(ms){
+  if(ms < 0) ms = 0;
+  const hrs = Math.floor(ms/3600000);
+  const mins = Math.floor((ms%3600000)/60000);
+  const secs = Math.floor((ms%60000)/1000);
+  return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`;
+}
+
+/* ============================
+   UI refs
+   ============================ */
+const voteButtonsEl = document.getElementById("voteButtons");
+const clockDigitsEl = document.getElementById("clockDigits");
+const clockWrapperEl = document.getElementById("clockWrapper");
+const phaseTextEl = document.getElementById("phaseText");
+const reactorFillEl = document.getElementById("reactorFill");
+const vaultItemsEl = document.getElementById("vaultItems");
+const chatMessagesEl = document.getElementById("chatMessages");
+const chatInputEl = document.getElementById("chatInput");
+const chatSendBtn = document.getElementById("chatSendBtn");
+const winnerOverlay = document.getElementById("winnerOverlay");
+const winnerSummary = document.getElementById("winnerSummary");
+const winnerTimer = document.getElementById("winnerTimer");
+const closeWinnerBtn = document.getElementById("closeWinnerBtn");
+
+/* ============================
+   Nick generation
+   ============================ */
+const ADJ = ["Phantom","Neon","Ghost","Silent","Cold","Frost","Shadow","Quantum","Static","Zero","Null","Cipher","Rogue","Vex","Echo","Blade"];
+const NOUN = ["Byte","Cipher","Kernel","Spike","Flux","Proxy","Packet","Node","Virus","Matrix","Grid","Pulse","Trace","Terminal","Vector","Ghost"];
+function djb2(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h)+s.charCodeAt(i); return Math.abs(h); }
+function nickFromId(id){ const h = djb2(id); const adj = ADJ[h % ADJ.length]; const noun = NOUN[Math.floor(h/100) % NOUN.length]; return `${adj}${noun}${String(h%100).padStart(2,'0')}`; }
+
+function getAnonId(){
+  let a = localStorage.getItem('htv_anon_id');
+  if(!a){ a = 'anon-' + Math.random().toString(36).slice(2,10); localStorage.setItem('htv_anon_id', a); }
+  return a;
+}
+const ANON_ID = getAnonId();
+let clientIP = null;
+(async function fetchIP(){ try{ const r = await fetch(IP_CHECK_URL); const j = await r.json(); clientIP = j.ip.replace(/\./g,'-'); }catch(e){ clientIP = null; } })();
+function getUserId(){ return clientIP ? clientIP : ANON_ID; }
+function getUserNick(){ return nickFromId(getUserId()); }
+
+/* ============================
+   DB initialization
+   ============================ */
+async function ensureDbInit(){
+  const votesSnap = await db.ref("votes").once("value");
+  if(!votesSnap.exists()){
+    const init = {};
+    VOTE_OPTIONS.forEach(o => init[safeKey(o)] = 0);
+    await db.ref("votes").set(init);
+  }
+  await db.ref("voteStart").transaction(curr=>{
+    if(curr === null) return Date.now();
+    return; // keep
+  });
+}
+ensureDbInit().catch(e=>console.warn("DB init failed",e));
+
+/* ============================
+   Render vote buttons
+   ============================ */
+function createVoteButtons(){
+  voteButtonsEl.innerHTML = '';
+  VOTE_OPTIONS.forEach(opt=>{
+    const key = safeKey(opt);
+    const btn = document.createElement('button');
+    btn.className = 'vote-btn';
+    btn.dataset.opt = opt;
+    btn.innerText = opt;
+    const span = document.createElement('span');
+    span.className = 'vote-count';
+    span.id = `count-${key}`;
+    span.innerText = '0';
+    btn.appendChild(span);
+    btn.addEventListener('click', ()=> attemptVote(opt));
+    voteButtonsEl.appendChild(btn);
+  });
+}
+createVoteButtons();
+
+/* ============================
+   DB listeners: votes, vault, chat
+   ============================ */
+db.ref("votes").on("value", snap=>{
+  const data = snap.val() || {};
+  let total = 0;
+  VOTE_OPTIONS.forEach(opt=>{
+    const k = safeKey(opt);
+    const c = Number(data[k] || 0);
+    const el = document.getElementById(`count-${k}`);
+    if(el) el.innerText = c;
+    total += c;
+  });
+  const pct = Math.min(100, total * 5);
+  if(reactorFillEl) reactorFillEl.style.width = pct + "%";
+});
+
+db.ref("vault").limitToLast(200).on("value", snap=>{
+  const val = snap.val() || {};
+  const entries = Object.values(val || {});
+  entries.sort((a,b)=> b.timestamp - a.timestamp);
+  vaultItemsEl.innerHTML = '';
+  if(entries.length === 0){ vaultItemsEl.innerHTML = '<em style="color:#bfe">No past decisions yet.</em>'; return; }
+  entries.forEach(e=>{
+    const d = new Date(e.timestamp);
+    const div = document.createElement('div');
+    div.className = 'vault-item';
+    div.innerHTML = `<div style="color:var(--pink);font-size:13px">${d.toLocaleString()} — Winner: ${e.winner}</div>
+                     <div style="font-size:12px;color:#dff">Counts: ${Object.entries(e.counts||{}).map(kv=> `${decodeURIComponent(kv[0])}:${kv[1]}`).join(', ')}</div>`;
+    vaultItemsEl.appendChild(div);
+  });
+});
+
+db.ref("chat").limitToLast(500).on("child_added", snap=>{
+  const m = snap.val();
+  if(!m) return;
+  const el = document.createElement('div');
+  el.className = 'chat-line';
+  el.textContent = `[${new Date(m.ts).toLocaleTimeString()}] [${m.nick}] ${m.text}`;
+  chatMessagesEl.appendChild(el);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+});
+
+/* ============================
+   voteStart listener -> timers
+   ============================ */
+let canonicalStart = null;
+db.ref("voteStart").on("value", snap=>{
+  const v = snap.val();
+  if(!v) return;
+  canonicalStart = Number(v);
+  startTimers();
+});
+
+/* ============================
+   Timer & phase management (auto-reset on expiry)
+   ============================ */
+let timerInterval = null;
+const processedLocalKey = 'htv_processed_cycles_v2';
+function markCycleProcessedLocally(cycleStart){
+  const arr = JSON.parse(localStorage.getItem(processedLocalKey) || '[]');
+  if(!arr.includes(cycleStart)) { arr.push(cycleStart); localStorage.setItem(processedLocalKey, JSON.stringify(arr)); }
+}
+function isCycleProcessedLocally(cycleStart){
+  const arr = JSON.parse(localStorage.getItem(processedLocalKey) || '[]');
+  return arr.includes(cycleStart);
+}
+
+function startTimers(){
+  if(timerInterval) clearInterval(timerInterval);
+  function tick(){
+    if(!canonicalStart) return;
+    const now = Date.now();
+    const diff = now - canonicalStart;
+    const cyclesPassed = Math.floor(diff / CYCLE_MS);
+    const cycleStart = canonicalStart + cyclesPassed * CYCLE_MS;
+    const voteEnd = cycleStart + VOTE_WINDOW_MS;
+    const rem = voteEnd - now;
+
+    if(rem > 0){
+      // voting
+      clockDigitsEl.textContent = fmtTime(rem);
+      phaseTextEl.textContent = "Phase: Voting";
+      document.querySelectorAll(".vote-btn").forEach(b=> b.disabled = false);
+
+      // flashing last 30 seconds
+      if(rem <= 30000){
+        clockDigitsEl.classList.add('clock-flash');
+      } else {
+        clockDigitsEl.classList.remove('clock-flash');
+      }
+    } else {
+      // cycle ended => process reveal & reset immediately
+      if(!isCycleProcessedLocally(cycleStart)){
+        processCycleEnd(cycleStart);
+      }
+    }
+  }
+  tick();
+  timerInterval = setInterval(tick, 250);
+}
+
+/* ============================
+   Process cycle end: compute winner, push to vault, reset votes, set new voteStart
+   ============================ */
+async function processCycleEnd(cycleStart){
+  const revealKey = `reveal_${cycleStart}`;
+  const processedSnap = await db.ref("reveals/" + revealKey).once("value");
+  if(processedSnap.exists()) { markCycleProcessedLocally(cycleStart); return; }
+  if(isCycleProcessedLocally(cycleStart)) return;
+  markCycleProcessedLocally(cycleStart);
+
+  // small delay to let final transactions land
+  setTimeout(async ()=>{
+    try{
+      const votesSnap = await db.ref("votes").once("value");
+      const votes = votesSnap.val() || {};
+      let winner = "No votes";
+      let max = -1;
+      for(const opt of VOTE_OPTIONS){
+        const k = safeKey(opt);
+        const c = Number(votes[k] || 0);
+        if(c > max){ max = c; winner = opt; }
+      }
+      // push vault entry
+      const vaultEntry = { winner, counts: votes, timestamp: Date.now(), cycleStart };
+      await db.ref("vault").push(vaultEntry);
+      await db.ref("reveals/" + revealKey).set({ processedAt: Date.now() });
+      // show overlay
+      showWinnerOverlay(vaultEntry);
+
+      // reset votes to zero
+      const resetObj = {};
+      VOTE_OPTIONS.forEach(o => resetObj[safeKey(o)] = 0);
+      await db.ref("votes").set(resetObj);
+
+      // advance voteStart to now (start fresh 3-hour window)
+      await db.ref("voteStart").transaction(curr=>{
+        if(curr === null) return Date.now();
+        if(Number(curr) === Number(cycleStart)) return Date.now();
+        return;
+      });
+
+      // play beep to notify everyone on this client
+      playBeep();
+    }catch(e){
+      console.error("processCycleEnd error:", e);
+    }
+  }, 900);
+}
+
+/* ============================
+   Winner overlay UI
+   ============================ */
+let winInterval = null;
+function showWinnerOverlay(entry){
+  winnerSummary.textContent = `Winner: ${entry.winner} — Counts: ${Object.entries(entry.counts||{}).map(kv=> `${decodeURIComponent(kv[0])}:${kv[1]}`).join(", ")}`;
+  // show time until next cycle end (3 hours from now)
+  function tick(){ const rem = VOTE_WINDOW_MS; winnerTimer.textContent = 'Next voting ends in: ' + fmtTime(rem); }
+  tick();
+  if(winInterval) clearInterval(winInterval);
+  winInterval = setInterval(tick, 1000);
+  winnerOverlay.style.display = 'flex';
+}
+closeWinnerBtn.addEventListener('click', ()=> winnerOverlay.style.display = 'none');
+
+/* ============================
+   Voting attempt (transaction safe)
+   ============================ */
+async function attemptVote(option){
+  const vsnap = await db.ref("voteStart").once("value");
+  const start = Number(vsnap.val() || Date.now());
+  const now = Date.now();
+  const cyclesPassed = Math.floor((now - start) / CYCLE_MS);
+  const cycleStart = start + cyclesPassed * CYCLE_MS;
+  const voteEnd = cycleStart + VOTE_WINDOW_MS;
+  if(now >= voteEnd){
+    alert("Voting just ended — wait a moment for reset.");
+    return;
+  }
+  if(clientIP === null) await fetchIP();
+  const ipKey = clientIP ? clientIP : ANON_ID;
+  const ipVotesRef = db.ref(`ipVotes/${ipKey}/${cycleStart}`);
+  try{
+    const res = await ipVotesRef.transaction(curr => (curr || 0) + 1);
+    if(!res.committed){ alert("Could not register vote. Try again."); return; }
+    const newCount = res.snapshot.val();
+    if(newCount > MAX_VOTES_PER_IP){
+      await ipVotesRef.transaction(curr => Math.max(0, (curr || 0) - 1));
+      alert(`Vote limit reached: ${MAX_VOTES_PER_IP} votes per ${VOTE_WINDOW_MS/3600000} hours.`);
+      return;
+    }
+    const k = safeKey(option);
+    await db.ref(`votes/${k}`).transaction(curr => (curr || 0) + 1);
+  }catch(e){
+    console.error("attemptVote error", e);
+    alert("Error submitting vote.");
+  }
+}
+
+/* ============================
+   Chat
+   ============================ */
+chatSendBtn.addEventListener('click', sendChat);
+chatInputEl.addEventListener('keydown', e=>{ if(e.key === 'Enter') sendChat(); });
+
+async function sendChat(){
+  const text = chatInputEl.value.trim();
+  if(!text) return;
+  const lastAt = Number(localStorage.getItem('htv_last_chat_at') || 0);
+  if(Date.now() - lastAt < 4000){ alert("Slow down — chat is rate-limited."); return; }
+  localStorage.setItem('htv_last_chat_at', String(Date.now()));
+  const payload = { text, ts: Date.now(), nick: getUserNick() };
+  try{
+    await db.ref("chat").push(payload);
+    chatInputEl.value = '';
+  }catch(e){
+    console.error("sendChat error", e);
+    alert("Could not send chat.");
+  }
+}
+
+/* ============================
+   IP helper
+   ============================ */
+async function fetchIP(){
+  try{
+    const r = await fetch(IP_CHECK_URL);
+    const j = await r.json();
+    clientIP = j.ip.replace(/\./g,'-');
+  }catch(e){
+    clientIP = null;
+  }
+}
+
+/* ============================
+   Audio beep (WebAudio) - short futuristic ping
+   ============================ */
+let audioCtx = null;
+function playBeep(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, now);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.12, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(now);
+    o.stop(now + 0.55);
+  }catch(e){
+    // ignore if audio blocked
+    console.warn("Audio error", e);
+  }
+}
+
+/* ============================
+   Matrix background
+   ============================ */
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+const letters = '01HACKTHEVOTEEXE'.split('');
+const fSize = 14;
+let cols = Math.floor(W / fSize);
+let drops = new Array(cols).fill(1);
+window.addEventListener('resize', ()=>{ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; cols = Math.floor(W/fSize); drops = new Array(cols).fill(1); });
+
+function drawMatrix(){
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(0,212,255,0.95)';
+  ctx.font = fSize + 'px monospace';
+  for(let i=0;i<cols;i++){
+    const ch = letters[Math.floor(Math.random()*letters.length)];
+    ctx.fillText(ch, i*fSize, drops[i]*fSize);
+    if(drops[i]*fSize > H && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 33);
+
+/* ============================
+   Startup
+   ============================ */
+(async function init(){
+  document.getElementById('maxLabel').textContent = MAX_VOTES_PER_IP;
+  await fetchIP();
+  await ensureDbInit();
+  console.log("HackTheVote live client ready. Nick:", getUserNick());
+})();
+</script>
+</body>
+</html>
